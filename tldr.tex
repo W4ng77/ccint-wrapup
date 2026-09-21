@@ -1,0 +1,203 @@
+\documentclass[10pt]{article}
+\input{preamble}
+
+% --- 两页版：收紧版面 ---------------------------------------------------
+\geometry{margin=0.82in}
+\setlength{\parskip}{0.28em}
+\setlength{\parindent}{0pt}
+\renewcommand{\arraystretch}{1.10}
+\titlespacing*{\section}{0pt}{1.4ex plus .3ex minus .2ex}{0.7ex}
+\titleformat{\section}{\large\bfseries\color{accent}}{\thesection.}{0.5em}{}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[C]{\footnotesize\thepage\ / 2}
+
+\begin{document}
+
+\begin{center}
+{\LARGE\bfseries ccint --- Canada Cyber Social Intelligence}\\[0.3em]
+{\normalsize Two-page summary \quad$\cdot$\quad full write-up available separately}\\[0.4em]
+\textcolor{accent}{\rule{\textwidth}{0.9pt}}\\[0.2em]
+{\footnotesize Status 2026-09-21 \quad$\cdot$\quad Corpus 2026-08-22 $\to$ 2026-09-21 (30 days)}
+\end{center}
+\vspace{-0.3em}
+
+% ==========================================================================
+\section{What it is}
+
+A longitudinal system that continuously collects Canada-related cybersecurity
+discussion from Bluesky, stores it as a timestamped corpus, tests it for
+temporal change, and has an LLM agent produce evidence-grounded analysis of
+what survives that test.
+
+\vspace{0.2em}
+\begin{minipage}[t]{0.47\textwidth}
+\small
+\begin{tabular}{@{}lr@{}}
+\toprule
+Posts collected & 90{,}503 \\
+Distinct authors & 26{,}810 \\
+Canada $\times$ cyber relevant & 650 (0.72\%) \\
+\textbf{Relevant posts / day} & \textbf{21.3} \\
+Collection runs & 78 \\
+Tests & 191 passing \\
+\bottomrule
+\end{tabular}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.50\textwidth}
+\vspace{-1.2em}
+\begin{keybox}
+\small
+\textbf{The headline result is a negative one.} No topic in the current window
+is distinguishable from random noise --- including the one that looks like
+$+56\%$ growth.
+\end{keybox}
+\end{minipage}
+
+% ==========================================================================
+\section{Why Bluesky, and what that costs}
+
+The corpus accrues with wall-clock time: a day not collected is a day
+permanently lost. So the question was not \emph{which platform is best} but
+\emph{which one can I start collecting from today}. X/Twitter is gated behind
+paid research access; Mastodon has no global search, so corpus completeness is
+undefinable; Reddit is viable and remains the best second source. Bluesky offers
+open API access with no approval step and verified history at least three months
+back.
+
+\textbf{It was chosen for API availability, not representativeness.} Its user
+base is skewed and much smaller than where most Canadians actually talk. Nothing here should be read as
+``what Canadians think'' --- it is ``what appears on Bluesky,'' and that gap is
+real and unmeasured.
+
+% ==========================================================================
+\section{The design decision that determines everything}
+
+\begin{keybox}
+\textbf{The collector searches 34 cybersecurity terms. Zero of them mention
+Canada.} Everything is stored; Canada relevance is decided \emph{afterwards},
+offline, against the stored corpus.
+\end{keybox}
+
+The asymmetry is deliberate. A \emph{collection} filter is irreversible --- posts
+never fetched cannot be recovered. A \emph{relevance} filter is reversible, as
+long as the raw payload survives. Cyber vocabulary is stable enough to bound
+collection; ``what counts as Canada-related'' is exactly the definition most
+likely to change, so it belongs on the recomputable side.
+
+\textbf{This paid off three times in one day.} \code{GTA} turned out to mean
+\emph{Grand Theft Auto} (18.1\% of ``relevant'' was video-game news);
+\code{CRA} meant the EU \emph{Cyber Resilience Act}; \code{CSIS} meant a US
+think tank. All three were fixed by writing a new label version --- \textbf{no
+re-collection}. Had ``canada'' been a search term, those errors would have been
+frozen into the corpus permanently. The cost is 139$\times$ storage overhead,
+which is the cheap side of that trade.
+
+% ==========================================================================
+\section{What the data actually says}
+
+Window comparison answers ``which topic changed most,'' not ``is that change
+larger than noise.'' A permutation test closes the gap: each author's entire
+posting history is circularly shifted across the 14-day span, preserving post
+counts, topic mix and burst structure while destroying calendar alignment.
+
+\vspace{0.2em}
+\begin{center}
+\small
+\begin{tabular}{@{}lrrrl@{}}
+\toprule
+\hd{topic} & \hd{$\Delta$} & \hd{growth} & \hd{$p$ (FWER)} & \hd{verdict} \\
+\midrule
+\code{data\_breach}         & $+10$ & $+56\%$  & 0.718 & \noise \\
+\code{other}                & $+4$  & $+5\%$   & 0.991 & \noise \\
+\code{malware\_infostealer} & $+3$  & $+100\%$ & 0.998 & \noise \\
+\code{ransomware}           & $-5$  & $-20\%$  & 0.969 & \noise \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{keybox}
+Under the null, random fluctuation alone produces a swing of $\pm28$ in
+\emph{some} topic. The largest observed change is $+10$. $p$-values are
+corrected for having picked the largest of 10 topics to narrate.
+\end{keybox}
+
+\textbf{$z$-scores were tested and rejected on evidence.} The real corpus has
+$\max|z| \in [0.2, 0.9]$, while pure Poisson noise produces $|z|$ with a median
+of 1.4--1.7 and a 95th percentile of 3.0--4.0 --- it scores noise higher than
+signal. The Poisson variance assumption fails because one author posting eight
+times, or one news item being reshared, breaks independence. Permutation testing
+assumes no distribution and is valid where the $z$-score is not.
+
+\textbf{How much more data is needed: about 8$\times$.} Measured, not assumed, by
+replicating the author pool and re-running the test --- scaling matches
+$\sqrt{k}$, and the effect becomes detectable at $\approx$1{,}264 relevant posts
+per window versus 158 today. Reachable via $\sim$56-day windows ($\approx$4
+months) or 8$\times$ the volume; parameter tuning cannot substitute.
+
+% ==========================================================================
+\section{Two structural findings}
+
+\textbf{The labeler was substantially wrong, and nobody had checked.} A stratified
+100-post sample with Wilson intervals put \code{is\_relevant} precision at
+\textbf{56.0\%} --- nearly half of what the system called Canada-related
+cybersecurity discussion was not. A corroboration rule (weak abbreviations count
+only when an independent Canada-side signal also fires) lifted it to
+\textbf{86.3\%}, recall 85.6\% $\to$ \textbf{91.7\%}. The pilot headline moved
+from 27/day to 21.3/day. The fix was not a better rule --- it was measuring the
+rule at all.
+
+\textbf{A quarter of the corpus has no audience.} \textbf{11 of 372 accounts
+(3.0\%) produce 158 of 650 relevant posts (24.3\%)}, with mean engagement
+\textbf{0.20} against \textbf{5.34} for everyone else. They are automated
+ransomware-leak-site monitors and security-conference promotion accounts.
+Concretely: of 45 \code{ransomware} posts in 14 days, \textbf{40 came from 5
+automated feeds}; excluding them removes the topic from the ranking entirely.
+Every \code{ransomware} rise or fall in earlier reports was measuring feed
+uptime. Detection is behavioral rather than a handle blocklist, and controls for
+collection lag --- \code{like\_count} is a snapshot, so without a settling-time
+guard every freshly collected post would look like a bot.
+
+% ==========================================================================
+\section{Limitations}
+
+\begin{itemize}[leftmargin=1.2em,itemsep=0.1em,topsep=0.2em]
+\item \textbf{Single source.} Structural, and the largest limitation.
+\item \textbf{Volume is $\sim$8$\times$ short} of supporting positive trend claims.
+  Defensible descriptions and defensible negative results are what it currently
+  produces.
+\item \textbf{The evaluation set is not independent} --- annotated by the same
+  agent that wrote the labeler, which likely inflates both precision and recall.
+\item \code{other} \textbf{absorbs 44\%} of relevant posts; the topic lexicon
+  does not cover half the corpus.
+\item \textbf{Weekend volume is $\sim$45\% of weekday volume}, which constrains
+  window choice.
+\item \textbf{Engagement metrics are snapshots}, not final values; cross-mode
+  comparison is invalid without a correction that does not yet exist.
+\end{itemize}
+
+% ==========================================================================
+\section{Next, in priority order}
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.1em,topsep=0.2em]
+\item \textbf{Independent annotation of the evaluation set} --- one TSV file, and
+  it currently gates the credibility of every precision number above.
+\item \textbf{Add Reddit} --- attacks single-source bias and the 8$\times$
+  shortfall at once, and is discussion-shaped rather than broadcast-shaped.
+\item Extend evaluation to incremental data; move to 28--56 day windows as the
+  corpus allows; correct engagement for collection lag.
+\item \textbf{Only then} entities, keywords and semantic drift --- once there is
+  enough data for them to mean anything.
+\end{enumerate}
+
+\vspace{0.3em}
+\begin{keybox}
+The most useful thing this project produced is \textbf{the ability to tell that
+it has not found a trend.} A version reporting \code{data\_breach} $+56\%$ would
+look more successful and would be wrong. The null model, power analysis,
+broadcast filter and evaluation set are the actual deliverable --- the corpus
+will grow, but the discipline to know when it is big enough had to come first.
+\end{keybox}
+
+\end{document}

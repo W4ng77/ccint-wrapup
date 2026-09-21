@@ -11,6 +11,7 @@
 *.lof
 *.lot
 main.pdf
+tldr.pdf
 
 # 不要同步进 Overleaf：
 # 这两个文件各自含有完整的 \documentclass，Overleaf 会认成第二个主文档
