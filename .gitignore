@@ -13,6 +13,9 @@
 main.pdf
 tldr.pdf
 
+# figures/*.pdf 是 `ccint viz` 的产物，但**必须提交** ——
+# Overleaf 侧没有数据库，拉不到图就编译不出来。
+
 # 不要同步进 Overleaf：
 # 这两个文件各自含有完整的 \documentclass，Overleaf 会认成第二个主文档
 ccint-wrapup-standalone.tex
