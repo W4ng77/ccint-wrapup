@@ -145,24 +145,88 @@ therefore recall, and its cause was the prompt: a clause instructing the model
 that an empty list is the expected answer, followed by a long list of
 prohibitions, drove a 4B model to the null answer. Removing the restraint
 clause and adding an explicit rule --- if the country name appears literally,
-it counts --- moved literal-mention recall from $69.0\%$ to $99.3\%$ at a cost
-of raising false positives from $0.5\%$ to $1.0\%$ (Figure~\ref{fig:prompt}).
+it counts --- moved literal-mention recall from $69.0\%$ to $99.3\%$
+(Figure~\ref{fig:prompt}).
 
-\begin{figure}[htbp]\centering
-\includegraphics[width=\linewidth]{iter_prompt.pdf}
-\caption{Entity-extraction recall on three probe sets before and after the
-prompt revision. The middle set is the diagnostic one: these are posts that
-literally contain the word \emph{Canada}, so any answer below $100\%$ is a
-failure of the instrument rather than a hard judgement call.}
-\label{fig:prompt}
-\end{figure}
+\paragraph{And the fix broke something the evaluation could not see.}
+The corrected prompt raised corpus relevance from 906 posts to 3{,}528. That
+number is wrong. Inspection of the additions found \code{trustedsec.com},
+\code{malwarebytes.com}, the UK's \code{NCSC}, \code{Revolut}, a French story
+about the \emph{\'Education nationale}, and \code{ia.cr} --- the Costa Rican
+top-level domain. The prompt's clause \emph{``a \code{.ca} or \code{.gc.ca}
+domain''} had been generalised by the model into \emph{``a domain''}.
 
-What remains after the fix is more interesting than what it removed. Of the
-posts the corrected extractor still misses, \textbf{none} contains the word
-\emph{Canada} in any form. They read \emph{``New post from \#Qilin: Coldfish
-Seafood''} --- a real Canadian victim, named, with no country marker anywhere
-in the text. No amount of prompting will let a 4B model know that Coldfish
-Seafood is Canadian.
+Two mechanical checks, requiring no further model calls, quantify it:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}Lrr@{}}
+\toprule
+\hd{Extracted entity type} & \hd{Count} & \hd{Not present in the post text} \\
+\midrule
+\code{place}         & 2{,}192 & \textbf{1{,}053 \;(48.0\%)} \\
+\code{org}           & 1{,}364 & 12 \;(0.9\%) \\
+\code{domain}        & 1{,}296 & 49 \;(3.8\%) \\
+\code{gov}           & 889     & 10 \;(1.1\%) \\
+\midrule
+\multicolumn{3}{@{}l}{\small Of the 1{,}296 \code{domain} entities, 312
+($24.1\%$) actually end in a Canadian TLD.} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{keybox}
+\textbf{A verification channel obtained by accident.} Character offsets are
+computed with \code{str.find} rather than requested from the model, on the
+narrow grounds that small models miscount offsets. That decision turned into an
+independent hallucination detector: an entity string that cannot be located in
+the post was invented. Nearly half of all \code{place} entities were ---
+the model writing ``Canada'' into a French post about a French ministry.
+Declining to trust a model with a task it does badly produced a free check on
+the task it was actually given.
+\end{keybox}
+
+Applying both rules --- discard entities absent from the text, discard domains
+outside Canadian TLDs --- removes 2{,}086 entities and 1{,}180 posts, and
+leaves the picture below. The validation layer is retained in the labeler even
+though the prompt will be corrected, because it is deterministic, costs
+nothing, and catches exactly the class of error the external evaluation set
+cannot.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}Lrrr@{}}
+\toprule
+\hd{Relevance gate} & \hd{recall} & \hd{specificity} & \hd{corpus} \\
+ & \hd{@\,registry pos.} & \hd{@\,registry neg.} & \hd{relevant} \\
+\midrule
+\code{rules\_v2} --- keyword conjunction       & 46.5\% & 99.8\% & 650 \\
+\code{llm\_v2a} --- two questions, prompt v1   & 53.5\% & 99.7\% & 860 \\
+\code{llm\_v2c} --- prompt v2 + validation     & \textbf{68.3\%} & 99.4\% & \textbf{2{,}348} \\
+\midrule
+\multicolumn{4}{@{}l}{\small \emph{before} validation, prompt v2 reported
+$69.3\%$ / $99.0\%$ / 3{,}528 --- one third of that corpus was spurious.} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{warnbox}
+\textbf{The negative set certified a corpus that was a third wrong.} A
+specificity of $99.0\%$ on \code{E\_reg\_neg} implies roughly 890 false
+positives across 89{,}044 posts. The true figure was 1{,}181. The negative set
+did not detect the failure because it is composed of feed posts about foreign
+ransomware victims: formulaic English, few URLs, no French. The model's actual
+failure modes --- over-generalising a domain rule, hallucinating a country name
+into French text --- do not occur in that population. An external label removes
+self-reference; it does not confer representativeness, and a non-representative
+evaluation set does not merely fail to detect a regression, it actively
+certifies one.
+\end{warnbox}
+
+\paragraph{What remains is a knowledge ceiling.}
+Of the posts the corrected and validated extractor still misses, \textbf{none}
+contains the word \emph{Canada} in any form. They read \emph{``New post from
+\#Qilin: Coldfish Seafood''} --- a real Canadian victim, named, with no country
+marker anywhere in the text. No amount of prompting will let a 4B model know
+that Coldfish Seafood is Canadian.
 
 \begin{keybox}
 This is a ceiling of a particular kind. The residual error in the relevance
@@ -314,8 +378,13 @@ A full-corpus screen of the 83{,}370 rejected posts long enough to judge found
 \code{is\_canada} was false --- the lexicon missed the entity --- and
 \emph{none} were blocked by the corroboration rule that a prior review had
 proposed retiring. Replacing the gate raised corpus-level relevant posts from
-650 to 906, an increase of $39\%$, with $65\%$ of the additions attributable
-to the Canadian side of the conjunction.
+650 to 2{,}348. Of the 1{,}799 posts newly admitted, $84.0\%$ were rejected by
+the Canadian side of the conjunction --- scored \code{is\_cyber} true and
+\code{is\_canada} false --- against $12.2\%$ on the cyber side and $3.7\%$ on
+both. In the other direction the new gate rejects 138 posts the rules had
+admitted. The asymmetry is the point: nearly all recoverable recall sat behind
+the Canada lexicon, and none of it behind the corroboration rule that a prior
+review had proposed retiring.
 
 But the registry cannot see any of that population. It contains ransomware
 victims, so it can only score the class of discussion that ransomware feeds
@@ -406,6 +475,11 @@ higher than reported, and probably lower.
 audit sample has been drawn and deliberately left unlabelled. The person who
 wrote the prompts should not be the person who scores them; doing so would
 reproduce the circularity that the registry was introduced to break.
+\item \textbf{The evaluation sets are narrow in a way that matters.} Both
+are built from ransomware victim names, so they exercise a formulaic English
+subpopulation. The domain over-generalisation documented above passed them
+cleanly. Any future prompt change should be checked against a probe drawn from
+the corpus itself, not only against the registry sets.
 \item \textbf{A 4B model.} Both gates run on Qwen3-4B. The residual failure
 mode identified above --- not knowing which small firms are Canadian --- would
 partly yield to a larger model, though a gazetteer addresses it more directly
