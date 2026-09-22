@@ -1,23 +1,29 @@
 \documentclass[10pt]{article}
 \input{preamble}
+\usepackage{lastpage}
 
 % --- 两页版：收紧版面 ---------------------------------------------------
 \geometry{margin=0.82in}
 \setlength{\parskip}{0.28em}
 \setlength{\parindent}{0pt}
 \renewcommand{\arraystretch}{1.10}
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.7}
+\renewcommand{\textfraction}{0.06}
+\renewcommand{\floatpagefraction}{0.8}
+\captionsetup{font=footnotesize,skip=5pt}
 \titlespacing*{\section}{0pt}{1.4ex plus .3ex minus .2ex}{0.7ex}
 \titleformat{\section}{\large\bfseries\color{accent}}{\thesection.}{0.5em}{}
 \pagestyle{fancy}
 \fancyhf{}
 \renewcommand{\headrulewidth}{0pt}
-\fancyfoot[C]{\footnotesize\thepage\ / 2}
+\fancyfoot[C]{\footnotesize\thepage\ / \pageref{LastPage}}
 
 \begin{document}
 
 \begin{center}
 {\LARGE\bfseries ccint --- Canada Cyber Social Intelligence}\\[0.3em]
-{\normalsize Two-page summary \quad$\cdot$\quad full write-up available separately}\\[0.4em]
+{\normalsize Summary with key figures \quad$\cdot$\quad full write-up available separately}\\[0.4em]
 \textcolor{accent}{\rule{\textwidth}{0.9pt}}\\[0.2em]
 {\footnotesize Status 2026-09-21 \quad$\cdot$\quad Corpus 2026-08-22 $\to$ 2026-09-21 (30 days)}
 \end{center}
@@ -59,17 +65,14 @@ $+56\%$ growth.
 \section{Why Bluesky, and what that costs}
 
 The corpus accrues with wall-clock time: a day not collected is a day
-permanently lost. So the question was not \emph{which platform is best} but
+permanently lost, so the question was not \emph{which platform is best} but
 \emph{which one can I start collecting from today}. X/Twitter is gated behind
-paid research access; Mastodon has no global search, so corpus completeness is
+paid research access; Mastodon has no global search, making corpus completeness
 undefinable; Reddit is viable and remains the best second source. Bluesky offers
-open API access with no approval step and verified history at least three months
-back.
-
-\textbf{It was chosen for API availability, not representativeness.} Its user
-base is skewed and much smaller than where most Canadians actually talk. Nothing here should be read as
-``what Canadians think'' --- it is ``what appears on Bluesky,'' and that gap is
-real and unmeasured.
+open API access with no approval step and verified history three months back.
+\textbf{It was chosen for API availability, not representativeness} --- its user
+base is skewed and far smaller than where most Canadians actually talk, so
+nothing here is ``what Canadians think,'' only ``what appears on Bluesky.''
 
 % ==========================================================================
 \section{The design decision that determines everything}
@@ -123,6 +126,9 @@ Under the null, random fluctuation alone produces a swing of $\pm28$ in
 corrected for having picked the largest of 10 topics to narrate.
 \end{keybox}
 
+What the corpus \emph{can} support is composition and provenance rather than
+trend --- Figures~\ref{fig:traj} and~\ref{fig:rawvsorganic}.
+
 \textbf{$z$-scores were tested and rejected on evidence.} The real corpus has
 $\max|z| \in [0.2, 0.9]$, while pure Poisson noise produces $|z|$ with a median
 of 1.4--1.7 and a 95th percentile of 3.0--4.0 --- it scores noise higher than
@@ -136,28 +142,46 @@ $\sqrt{k}$, and the effect becomes detectable at $\approx$1{,}264 relevant posts
 per window versus 158 today. Reachable via $\sim$56-day windows ($\approx$4
 months) or 8$\times$ the volume; parameter tuning cannot substitute.
 
+\begin{figure}[htbp]\centering
+\includegraphics[width=0.96\textwidth]{figures/fig_tldr_trajectory.pdf}
+\caption{Three topics that behave completely differently once broadcast accounts
+are separated out. In \code{ransomware} the orange line sits near zero for the
+whole month: there is almost no organic discussion under that label. In
+\code{fraud\_financial} all three lines are coincident. \code{data\_breach} sits
+between them. \emph{None of these movements is statistically significant} --- the
+figure shows composition, not trend.}
+\label{fig:traj}
+\end{figure}
+
 % ==========================================================================
 \section{Two structural findings}
 
 \textbf{The labeler was substantially wrong, and nobody had checked.} A stratified
 100-post sample with Wilson intervals put \code{is\_relevant} precision at
-\textbf{56.0\%} --- nearly half of what the system called Canada-related
-cybersecurity discussion was not. A corroboration rule (weak abbreviations count
-only when an independent Canada-side signal also fires) lifted it to
-\textbf{86.3\%}, recall 85.6\% $\to$ \textbf{91.7\%}. The pilot headline moved
-from 27/day to 21.3/day. The fix was not a better rule --- it was measuring the
+\textbf{56.0\%}: nearly half of what the system called Canada-related
+cybersecurity discussion was not. A corroboration rule --- weak abbreviations
+count only when an independent Canada-side signal also fires --- lifted it to
+\textbf{86.3\%} (recall 85.6\% $\to$ \textbf{91.7\%}), moving the pilot headline
+from 27/day to 21.3/day. The fix was not a better rule; it was measuring the
 rule at all.
 
 \textbf{A quarter of the corpus has no audience.} \textbf{11 of 372 accounts
-(3.0\%) produce 158 of 650 relevant posts (24.3\%)}, with mean engagement
-\textbf{0.20} against \textbf{5.34} for everyone else. They are automated
-ransomware-leak-site monitors and security-conference promotion accounts.
-Concretely: of 45 \code{ransomware} posts in 14 days, \textbf{40 came from 5
-automated feeds}; excluding them removes the topic from the ranking entirely.
-Every \code{ransomware} rise or fall in earlier reports was measuring feed
-uptime. Detection is behavioral rather than a handle blocklist, and controls for
-collection lag --- \code{like\_count} is a snapshot, so without a settling-time
-guard every freshly collected post would look like a bot.
+(3.0\%) produce 24.3\% of relevant posts}, at mean engagement \textbf{0.20}
+against \textbf{5.34} for everyone else --- automated ransomware-leak-site
+monitors and conference-promotion accounts. Detection is behavioural, not a
+handle blocklist, and controls for collection lag: \code{like\_count} is a
+snapshot, so without a settling-time guard every freshly collected post would
+look like a bot. Posting concentration falls from Gini \textbf{0.38} to
+\textbf{0.23} once they are removed.
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=0.96\textwidth]{figures/fig_tldr_raw_vs_organic.pdf}
+\caption{Plotting raw volume alone would rank \code{ransomware} second. Eleven
+broadcast accounts take it from 105 posts to 17, contributed by 12 authors,
+while \code{fraud\_financial} is 85/84/80 --- essentially untouched. Any chart of
+this corpus showing raw counts only is misleading by construction.}
+\label{fig:rawvsorganic}
+\end{figure}
 
 % ==========================================================================
 \section{Limitations}
@@ -169,10 +193,9 @@ guard every freshly collected post would look like a bot.
   produces.
 \item \textbf{The evaluation set is not independent} --- annotated by the same
   agent that wrote the labeler, which likely inflates both precision and recall.
-\item \code{other} \textbf{absorbs 44\%} of relevant posts; the topic lexicon
-  does not cover half the corpus.
-\item \textbf{Weekend volume is $\sim$45\% of weekday volume}, which constrains
-  window choice.
+\item \code{other} \textbf{absorbs 44\%} of relevant posts and weekend volume is
+  $\sim$45\% of weekday volume --- the first limits cross-topic comparison, the
+  second constrains window choice.
 \item \textbf{Engagement metrics are snapshots}, not final values; cross-mode
   comparison is invalid without a correction that does not yet exist.
 \end{itemize}
@@ -186,9 +209,9 @@ guard every freshly collected post would look like a bot.
 \item \textbf{Add Reddit} --- attacks single-source bias and the 8$\times$
   shortfall at once, and is discussion-shaped rather than broadcast-shaped.
 \item Extend evaluation to incremental data; move to 28--56 day windows as the
-  corpus allows; correct engagement for collection lag.
-\item \textbf{Only then} entities, keywords and semantic drift --- once there is
-  enough data for them to mean anything.
+  corpus allows; correct engagement for collection lag. \textbf{Only then}
+  entities, keywords and semantic drift --- once there is enough data for them
+  to mean anything.
 \end{enumerate}
 
 \vspace{0.3em}
@@ -196,8 +219,8 @@ guard every freshly collected post would look like a bot.
 The most useful thing this project produced is \textbf{the ability to tell that
 it has not found a trend.} A version reporting \code{data\_breach} $+56\%$ would
 look more successful and would be wrong. The null model, power analysis,
-broadcast filter and evaluation set are the actual deliverable --- the corpus
-will grow, but the discipline to know when it is big enough had to come first.
+broadcast filter and evaluation set are the deliverable; the corpus will grow,
+but the discipline to know when it is big enough had to come first.
 \end{keybox}
 
 \end{document}
