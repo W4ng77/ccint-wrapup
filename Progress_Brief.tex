@@ -3,6 +3,10 @@
 \geometry{margin=0.92in}
 \setlist{topsep=3pt,itemsep=2pt,parsep=0pt}
 \renewcommand{\arraystretch}{1.05}
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.7}
+\renewcommand{\textfraction}{0.06}
+\renewcommand{\floatpagefraction}{0.85}
 
 \title{\vspace{-1.7cm}\textbf{\color{accent}ccint --- Progress Brief}\\[3pt]
 \large\color{ink} Canada Cyber Social Intelligence: design rationale, build, and
@@ -50,11 +54,11 @@ merit. The consequence is stated rather than hidden: this is a convenience
 sample, and the project's job became partly to measure what it can show.
 
 \paragraph{Labels are versioned and never overwritten.}
-\code{post\_labels} is keyed \code{(post\_id, label\_version)} and rows are only
-ever inserted. Four labelling schemes currently coexist over the same corpus
-and can be diffed row by row. Without this, every improvement to the labeller
-would silently rewrite history, and a change in topic distribution could never
-be attributed to the world rather than to the method.
+Annotation rows are keyed by (post, annotator version) and only ever inserted;
+four schemes coexist over the same corpus and diff row by row. Without this,
+every improvement to the annotator would silently rewrite history, and a shift
+in topic distribution could never be attributed to the world rather than to the
+method.
 
 \paragraph{Raw data is kept verbatim; every number carries provenance.}
 \code{raw\_payload} is stored unmodified, and every run and model label records
@@ -65,11 +69,11 @@ noticing that a model labeller's output is entirely determined by its prompt:
 the conditions that made them.
 
 \paragraph{System failure must be distinguishable from social change.}
-Every collection path writes to \code{collection\_runs} with mode, status,
-window and counts. A day with half the usual volume must be attributable to
-either the world or a token expiry, and only bookkeeping makes that possible.
-This principle held under test: a 42-run token outage is visible in the record
-as 42 \code{partial} runs rather than as a drop in Canadian cyber discussion.
+Every collection path records mode, status, window and counts. A day with half
+the usual volume must be attributable to either the world or a token expiry,
+and only bookkeeping makes that possible. The principle held under test: a
+42-run token outage appears in the record as 42 \code{partial} runs, not as a
+drop in Canadian cyber discussion.
 
 \begin{keybox}
 Underlying all four: \textbf{measure before improving.} Repeatedly the
@@ -81,11 +85,11 @@ evaluation set certified as correct.
 \end{keybox}
 
 \begin{figure}[tb]\centering
-\includegraphics[width=0.87\linewidth]{Architecture.png}
-\caption{System architecture. Blue is durable state, orange is the world
-outside the system, green is the provenance rail that every path must write
-to. The external-reference column on the right is the most recent addition and
-the one that changed the project's conclusions.}
+\includegraphics[width=1.0\linewidth]{Architecture.png}
+\caption{Processing pipeline. Stages 1--3 acquire and store the corpus, stage 4
+annotates it under coexisting versioned schemes, stage 5 analyses the result.
+The external-validation column supplies labels no component of the pipeline
+produced.}
 \label{fig:arch}
 \end{figure}
 
@@ -93,20 +97,15 @@ the one that changed the project's conclusions.}
 
 Collection runs in two modes against the fixed term list --- a day-by-day
 backfill and an hourly incremental --- with idempotent ingestion, stale-run
-reaping and client-timestamp repair. The corpus stands at 91{,}551 posts over
-22 August -- 22 September 2026.
-
-Labelling proceeded in four generations, all retained. \code{rules\_v1} and
-\code{rules\_v2} are lexicon-based; \code{llm\_v1} re-decides topic only,
+reaping and client-timestamp repair. Annotation proceeded in four generations,
+all retained: two lexicon-based, one that re-decides topic only while
 inheriting the relevance verdict verbatim so the two changes stay separately
-attributable; \code{llm\_v2c} replaces the relevance gate. Analysis covers
-descriptive statistics, permutation testing against two null models,
+attributable, and one that replaces the relevance decision entirely. Analysis
+covers descriptive statistics, permutation testing against two null models,
 behavioural broadcast detection with a collection-lag control, and a two-axis
 actor typology separating measured audience from content-judged function. The
-most recent phase added the right-hand column of Figure~\ref{fig:arch}: an
-external registry, evaluation sets built from it, and an oracle collection
-mode that asks what the platform \emph{would} have yielded had the answer been
-known in advance.
+most recent phase added the external-validation column of
+Figure~\ref{fig:arch}.
 
 \section*{\color{accent}Where it stands}
 
@@ -140,13 +139,13 @@ construction.
 
 \subsection*{Replacing the relevance gate}
 
-The old gate was a conjunction of two narrow lexicons, so recall was bounded
-by their intersection: 650 of 91{,}551 posts passed, and the 89{,}714 rejected
-had never been examined by anything semantic. The replacement asks a local
-model two \emph{independent} single questions rather than one conjunction ---
-a single combined prompt causes a 4B model to collapse the conjunction onto
-the side it knows better, admitting global threat-intelligence noise at
-$6.8\%$ while the true Canadian rate is $1.1\%$.
+The old decision was a conjunction of two narrow lexicons, so recall was
+bounded by their intersection: 650 of 91{,}551 posts passed and the 89{,}714
+rejected had never been examined by anything semantic. The replacement poses
+two \emph{independent} predicates rather than one conjunction --- a single
+combined prompt causes a 4B model to collapse the conjunction onto the side it
+knows better, admitting global threat-intelligence noise at $6.8\%$ against a
+true Canadian rate of $1.1\%$.
 
 \begin{center}\small
 \begin{tabularx}{.93\linewidth}{@{}Lrrr@{}}
@@ -161,16 +160,15 @@ $6.8\%$ while the true Canadian rate is $1.1\%$.
 \end{center}
 
 Of the 1{,}799 posts newly admitted, $84.0\%$ had been rejected on the Canadian
-side of the conjunction. Two findings from this phase are worth carrying
-forward as method rather than as numbers. First, entity character offsets are
-computed with \code{str.find} rather than requested from the model, on the
-narrow grounds that small models miscount them --- and this turned into a free
-hallucination detector, since an entity that cannot be located in the post was
-invented. Nearly half of extracted \code{place} entities failed it. Second,
-the residual error that remains is not a prompt or capability problem: the
-posts still missed contain no country marker at all (``New post from \#Qilin:
-Coldfish Seafood''), so closing it requires a gazetteer of Canadian
-organisations rather than a better model.
+side of the conjunction. Two results here are method rather than number.
+Entity offsets are computed with \code{str.find} rather than requested from the
+model, on the narrow grounds that small models miscount them --- which turned
+into a free hallucination detector, since an entity that cannot be located in
+the post was invented, and nearly half of extracted \code{place} entities
+failed it. And the residual error is neither a prompt nor a capability problem:
+the posts still missed carry no country marker at all (``New post from
+\#Qilin: Coldfish Seafood''), so closing it needs a gazetteer of Canadian
+organisations, not a larger model.
 
 \subsection*{The external reference, and the central result}
 
@@ -213,11 +211,10 @@ corpus is $8\times$ as much syndication, so volume is the wrong lever.
 
 The one exception is instructive. The Commission de la construction du
 Qu\'ebec, listed by the Qilin group with roughly 350{,}000 records taken, drew
-genuine Canadian media coverage in French and English. Four of the five posts
-are in the corpus; the missing one, a radio interview with the CCQ's chief
-executive, contains no term from the 34-term list because \emph{protection
-pr\'eventive} is in no lexicon. One post, one missing phrase, a real event ---
-the collection-boundary gap at human scale.
+genuine Canadian media coverage in both languages. Four of the five posts are
+in the corpus; the fifth, a radio interview with the CCQ's chief executive,
+carries no term from the 34-term list because \emph{protection pr\'eventive} is
+in no lexicon --- the collection-boundary gap at human scale.
 
 \subsection*{A methodological result about evaluation}
 
@@ -240,34 +237,30 @@ so. What is available, and appears to be unreported in the surveyed
 literature, is a sensor that states its own blind spots numerically. Published
 systems report how many events they detected (84 of 151 in the strongest
 comparable work); none reports how many events had no platform presence at
-all, because establishing that requires the per-event oracle search used here,
-affordable only when the event count is small. This project's greatest
+all, because establishing that requires the per-event entity-directed
+retrieval used here, affordable only when the event count is small. This project's greatest
 liability --- a corpus of a few thousand relevant posts --- is precisely what
 makes the denominator measurable.
 
 Immediate priorities, in order:
 
 \begin{enumerate}[leftmargin=1.5em,itemsep=2pt]
-\item \textbf{Widen the registry beyond ransomware} --- Cyber Centre
-advisories, CISA KEV, Canadian media RSS. Every figure above is conditioned on
-a source seeing only leak-site victims: the narrowest limitation in the work.
-\item \textbf{Feed the registry back into the gate.} The residual failure is
-missing knowledge of Canadian organisation names; the registry is a list of
-exactly those names.
-\item \textbf{Add a Canada-side query stream} as an additional OR stream, not
-a filter --- to reach the population the registry cannot see.
+\item \textbf{Widen the registry beyond ransomware} --- advisories, KEV,
+Canadian media. Every figure above is conditioned on a source that sees only
+leak-site victims: the narrowest limitation in the work.
+\item \textbf{Feed the registry back into the relevance decision.} The residual
+failure is missing knowledge of Canadian organisation names, and the registry
+is a list of exactly those names.
+\item \textbf{Add a Canada-side query stream} as an additional disjunctive
+stream, not a filter, to reach the population the registry cannot see.
 \item \textbf{Have an independent annotator label the 200-post sample} already
-drawn and left blank. It is the one step that cannot be automated, and the one
-every other number rests on.
+drawn and left blank --- the one step that cannot be automated.
 \end{enumerate}
 
-\enlargethispage{3\baselineskip}
 \medskip
-\begin{plainbox}
-\footnotesize
+\noindent{\footnotesize\itshape\color{ink!65}
 Corpus 91{,}551 posts, 22 Aug -- 22 Sep 2026; registry retrieved 22 Sep 2026;
-four coexisting label versions; 243 tests passing. Methodology in the project
-wrap-up; coverage measurements in the iteration report.
-\end{plainbox}
+four coexisting annotation versions; 243 tests passing. Methodology in the
+project wrap-up, coverage measurements in the iteration report.}
 
 \end{document}

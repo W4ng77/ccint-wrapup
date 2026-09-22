@@ -290,9 +290,9 @@ victim organisation's name was searched directly on Bluesky --- with no
 cybersecurity term attached --- over a $[-2, +30]$ day window. Because bare
 organisation names attract unrelated traffic (\emph{MEQ} retrieves the medical
 unit; \emph{Air Canada} retrieves fare deals), every hit was then passed
-through the cyber judgement before counting. This is an oracle: it asks what
-the platform would have yielded had we known in advance exactly what to look
-for.
+through the cyber judgement before counting. This is entity-directed
+retrieval: it establishes an upper bound on what the platform could have
+yielded for an event whose identity is already known.
 
 \begin{figure}[htbp]\centering
 \includegraphics[width=\linewidth]{iter_funnel.pdf}
@@ -408,8 +408,9 @@ Available, and unusual: a sensor that reports its own blind spots with
 numbers. Nobody in this literature publishes a denominator. Tweezers reports
 detecting 84 of 151 events; systems it compares against report 45 and 4. All
 three report a numerator. None reports how many events had no platform
-presence at all, because establishing that requires the per-event oracle search
-run here, and that search is only cheap if the event count is small. This
+presence at all, because establishing that requires the per-event
+entity-directed retrieval run here, and that is only cheap if the event count
+is small. This
 project's greatest liability --- a corpus of 650 relevant posts --- is exactly
 what makes the denominator measurable.
 
@@ -447,7 +448,7 @@ be read as negative. \\
 Registry tables & \code{external\_events}, \code{external\_event\_entities},
 \code{eval\_sets}, \code{post\_entities}. Evaluation sets are frozen on
 creation and carry a stratum. \\
-Oracle collection mode & A measurement-only collection path still writes to
+Measurement-only retrieval mode & An entity-directed retrieval path still writes to
 \code{collection\_runs}; the schema constraint previously forced such paths to
 bypass run bookkeeping, which is precisely what makes system failures
 indistinguishable from social change. \\
@@ -514,7 +515,8 @@ support.
 \footnotesize
 All figures in this report derive from the corpus of 91{,}551 posts collected
 between 22 August and 22 September 2026, the ransomware.live registry as
-retrieved on 22 September 2026, and an oracle search executed the same day.
+retrieved on 22 September 2026, and an entity-directed retrieval pass executed
+the same day.
 Labels are stored under versioned identifiers and every model-produced label
 carries the hash of the prompt that produced it. The test suite stands at 241
 passing.

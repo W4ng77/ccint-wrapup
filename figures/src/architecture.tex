@@ -7,115 +7,116 @@
 \definecolor{ink}{HTML}{1A1A1A}
 \definecolor{accent}{HTML}{2a78d6}
 \definecolor{warn}{HTML}{eb6834}
-\definecolor{good}{HTML}{1baf7a}
-\definecolor{rule}{HTML}{C0C6CE}
-\definecolor{accentbg}{HTML}{EAF0F6}
-\definecolor{warnbg}{HTML}{FDEFE9}
-\definecolor{goodbg}{HTML}{E8F6F0}
+\definecolor{band}{HTML}{F3F6F9}
+\definecolor{accentbg}{HTML}{E9F0F7}
+\definecolor{warnbg}{HTML}{FCEFE9}
+
+\hyphenpenalty=10000 \exhyphenpenalty=10000 \tolerance=9999
 
 \begin{document}
 \begin{tikzpicture}[
   font=\sffamily\small, x=1cm, y=1cm,
-  box/.style={draw=rule, fill=white, rounded corners=2.5pt, line width=.7pt,
-              align=center, inner sep=5pt, minimum height=9mm, text width=#1},
-  box/.default=38mm,
-  store/.style={box=#1, fill=accentbg, draw=accent},
-  store/.default=38mm,
-  ext/.style={box=#1, fill=warnbg, draw=warn},
-  ext/.default=34mm,
-  prov/.style={box=#1, fill=goodbg, draw=good, font=\sffamily\scriptsize,
-               minimum height=8mm},
-  prov/.default=33mm,
-  note/.style={font=\sffamily\scriptsize\itshape, text=ink!60, align=left,
-               inner sep=1pt},
-  ar/.style={-{Stealth[length=4.5pt]}, draw=ink!50, line width=.65pt},
-  arg/.style={ar, draw=good, line width=.6pt},
-  arx/.style={-{Stealth[length=4.5pt]}, draw=warn, dashed, line width=.65pt},
-  hdr/.style={font=\sffamily\footnotesize\bfseries, text=ink!55},
+  stage/.style={draw=ink!45, fill=white, rounded corners=1.5pt, line width=.75pt,
+                align=center, inner sep=4.5pt, text width=#1, minimum height=11mm},
+  stage/.default=44mm,
+  data/.style={stage=#1, draw=accent, fill=accentbg}, data/.default=44mm,
+  extn/.style={stage=#1, draw=warn, fill=warnbg},    extn/.default=42mm,
+  sub/.style={draw=ink!32, fill=white, rounded corners=1.5pt, line width=.5pt,
+              align=center, inner sep=3.5pt, font=\sffamily\scriptsize,
+              text width=#1, minimum height=7.5mm}, sub/.default=46mm,
+  grp/.style={draw=ink!45, fill=white, rounded corners=2pt, line width=.75pt,
+              inner sep=4.5pt},
+  num/.style={circle, draw=ink!55, fill=white, line width=.65pt, inner sep=0pt,
+              minimum size=5mm, font=\sffamily\scriptsize\bfseries},
+  ann/.style={font=\sffamily\scriptsize, text=ink!62, align=center, inner sep=1.5pt},
+  ar/.style={-{Stealth[length=4.4pt]}, draw=ink!55, line width=.75pt},
+  arw/.style={-{Stealth[length=4.4pt]}, draw=warn, line width=.75pt, dashed},
+  hdr/.style={font=\sffamily\footnotesize\bfseries, text=ink!50},
 ]
 
-% ===== column headers =====
-\node[hdr] at (-6.6, 4.0) {PROVENANCE};
-\node[hdr] at (0, 4.0) {COLLECTION \& LABELLING};
-\node[hdr] at (8.3, 4.0) {EXTERNAL REFERENCE};
-\draw[rule, line width=.5pt] (-8.6,3.7) -- (10.5,3.7);
+%% ---------------- row 1 : acquisition ----------------
+\node[stage] (ret) at (0, 0)
+  {Keyword retrieval\\[-1pt]{\scriptsize 34 query terms · one request per term\\
+   \textit{no query term names Canada}}};
+\node[stage] (ing) at (5.6, 0)
+  {Ingestion\\[-1pt]{\scriptsize idempotent upsert · deduplication\\timestamp normalisation}};
+\node[data]  (cor) at (11.2, 0)
+  {Corpus \;$n = 91{,}551$\\[-1pt]{\scriptsize immutable raw payloads}};
 
-% ===== centre pipeline =====
-\node[ext=40mm] (bsky) at (0, 3.0)
-  {Bluesky \texttt{searchPosts}\\[-1pt]{\scriptsize 34 cyber terms, \emph{none} naming Canada}};
-\node[box=40mm] (ingest) at (0, 1.5)
-  {ingest\\[-1pt]{\scriptsize idempotent upsert · stale-run reaping}};
-\node[store=46mm] (posts) at (0, 0.0)
-  {\textbf{posts} \;\;91{,}551\\[-1pt]{\scriptsize \texttt{raw\_payload} kept verbatim}};
+\draw[ar] (ret) -- (ing);
+\draw[ar] (ing) -- (cor);
 
-\node[box=27mm] (rules) at (-3.9, -2.0)
-  {\texttt{rules\_v2}\\[-2pt]{\scriptsize keyword conjunction}\\[-2pt]{\scriptsize 650 relevant}};
-\node[box=29mm] (gate)  at (0, -2.0)
-  {\texttt{llm\_v2c}\\[-2pt]{\scriptsize two single questions}\\[-2pt]{\scriptsize \textbf{2{,}348 relevant}}};
-\node[box=27mm] (topic) at (3.9, -2.0)
-  {\texttt{llm\_v1}\\[-2pt]{\scriptsize topic assignment}\\[-2pt]{\scriptsize \texttt{other} 31.4\%}};
+%% ---------------- row 2 : annotation, store, analysis ----------------
+\node[sub] (a1) at (0.6, -2.85) {Rule-based baseline \;lexicon conjunction \;($n{=}650$)};
+\node[sub] (a2) at (0.6, -3.72)
+  {\textbf{Relevance model} \;decoupled binary predicates $+$ entity extraction \;($n{=}2{,}348$)};
+\node[sub] (a3) at (0.6, -4.59) {Topic model \;11-class assignment};
+\begin{scope}[on background layer]\node[grp, fit=(a1)(a2)(a3)] (ann) {};\end{scope}
 
-\node[store=64mm] (labels) at (0, -4.05)
-  {\textbf{post\_labels} \;\; key \texttt{(post\_id, label\_version)}\\[-1pt]
-   {\scriptsize versions coexist · rows are never updated}};
-\node[store=30mm] (ents) at (5.5, -4.05)
-  {\textbf{post\_entities}\\[-1pt]{\scriptsize offsets via \texttt{str.find}}};
+\node[data=40mm] (out) at (6.8, -3.72)
+  {Versioned annotations\\[-1pt]{\scriptsize append-only · keyed by\\(post, annotator version)}};
 
-\node[box=25mm] (desc)  at (-5.4, -6.1) {descriptive};
-\node[box=29mm] (trend) at (-2.2, -6.1)
-  {trend + null model\\[-2pt]{\scriptsize \textcolor{warn}{publication frozen}}};
-\node[box=29mm] (actor) at (1.3, -6.1)
-  {actor typology\\[-2pt]{\scriptsize audience $\times$ function}};
-\node[box=25mm] (agent) at (4.5, -6.1)
-  {agent\\[-2pt]{\scriptsize cited summaries}};
+\node[sub=40mm] (n1) at (12.1, -2.85) {Descriptive statistics};
+\node[sub=40mm] (n2) at (12.1, -3.72) {Change detection \;\textit{permutation tests}};
+\node[sub=40mm] (n3) at (12.1, -4.59) {Actor typology};
+\begin{scope}[on background layer]\node[grp, fit=(n1)(n2)(n3)] (ana) {};\end{scope}
 
-% ===== right column =====
-\node[ext=36mm] (reg)   at (8.3, 3.0)
-  {ransomware.live\\[-1pt]{\scriptsize + advisories, media RSS \emph{(next)}}};
-\node[store=40mm] (extev) at (8.3, 1.4)
-  {\textbf{external\_events}\\[-1pt]{\scriptsize 1{,}080 events · 1{,}943 entities}};
-\node[store=40mm] (eval)  at (8.3, -0.2)
-  {\textbf{eval\_sets}\\[-1pt]{\scriptsize stratified by account type}};
-\node[ext=36mm] (oracle)  at (8.3, -2.1)
-  {oracle search\\[-1pt]{\scriptsize \texttt{mode=oracle} · writes \texttt{collection\_runs}}};
+\draw[ar] (ann) -- (out);
+\draw[ar] (out) -- (ana);
 
-% ===== left rail =====
-\node[prov] (cruns) at (-6.6, 2.3) {\textbf{collection\_runs}\\mode · status · window · counts};
-\node[prov] (lprov) at (-6.6, 0.6) {\textbf{label\_provenance}\\prompt sha256 · model · params};
-\node[prov] (aruns) at (-6.6, -1.1) {\textbf{analysis\_runs}\\versions · method · timestamp};
-\node[note, text width=34mm] at (-6.6, -2.7)
-  {every published number\\traces back to the exact\\inputs that produced it};
+%% wrap connector: corpus -> annotation
+\draw[ar] (cor.south) -- ++(0,-.75) -| (ann.north);
 
-% ===== edges: pipeline =====
-\draw[ar] (bsky) -- (ingest);
-\draw[ar] (ingest) -- (posts);
-\draw[ar] (posts.south) -- ++(0,-.45) -| (rules.north);
-\draw[ar] (posts.south) -- (gate.north);
-\draw[ar] (posts.south) -- ++(0,-.45) -| (topic.north);
-\draw[ar] (rules.south) -- ++(0,-.45) -| ([xshift=-19mm]labels.north);
-\draw[ar] (gate.south)  -- (labels.north);
-\draw[ar] (topic.south) -- ++(0,-.45) -| ([xshift=19mm]labels.north);
-\draw[ar] (gate.east) -- ++(.55,0) |- (ents.west);
-\foreach \t in {desc,trend,actor,agent}
-  \draw[ar] (labels.south) -- ++(0,-.5) -| (\t.north);
+%% stage numbers and group captions
+\node[num] at ([yshift=8.5mm]ret.center) {1};
+\node[num] at ([yshift=8.5mm]ing.center) {2};
+\node[num] at ([yshift=8.5mm]cor.center) {3};
+\node[num] at ([shift={(-26mm,16.5mm)}]ann.center) {4};
+\node[num] at ([shift={(-23mm,16.5mm)}]ana.center) {5};
+\node[ann, anchor=west] at ([shift={(-21mm,16.5mm)}]ann.center) {\textbf{Annotation}};
+\node[ann, anchor=west] at ([shift={(-18mm,16.5mm)}]ana.center) {\textbf{Analysis}};
 
-% ===== edges: external =====
-\draw[ar] (reg) -- (extev);
-\draw[ar] (extev) -- (eval);
-\draw[arx] (extev.west) -- node[note, above, midway]{name match} (posts.east);
-% 评测集打分的是标签,不是实体 —— 走底部通道进 post_labels,与 oracle 的通道平行
-\draw[arx] (eval.east) -- ++(.55,0) |- ([yshift=-3mm]labels.south east);
-\node[note, anchor=north east, align=right] at (10.05, -5.0)
-  {scores the gate against labels\\no part of this system produced};
-\node[note, below=2mm of oracle, text width=40mm, align=center]
-  {what the platform \emph{would} have yielded,\\had we known the answer in advance};
-\draw[arx] (oracle.east) -- ++(1.05,0) |- (agent.east);
+%% ---------------- external validation (right) ----------------
+\node[hdr, anchor=west] at (15.55, 1.35) {EXTERNAL VALIDATION};
+\node[extn] (src) at (17.9, 0)
+  {Public incident registry\\[-1pt]{\scriptsize $1{,}080$ events · $1{,}943$ entities}};
+\node[data=42mm] (ev) at (17.9, -2.2)
+  {Reference evaluation sets\\[-1pt]{\scriptsize stratified by account class}};
+\node[extn] (edr) at (17.9, -4.4)
+  {Entity-directed retrieval\\[-1pt]{\scriptsize platform-availability upper bound}};
 
-% ===== edges: provenance =====
-\draw[arg] (ingest.west) -- (cruns.east);
-\draw[arg] (gate.west) -- ++(-.4,0) |- (lprov.east);
-\draw[arg] (desc.west) -- ++(-1.0,0) |- (aruns.south);
+\draw[ar] (src) -- (ev);
+\draw[ar] (ev) -- (edr);
+\draw[arw] (src.west) -- node[ann, above, pos=.5]{entity matching} (cor.east);
+\draw[arw] (ev.west)  -- ++(-.7,0) -| node[ann, above, pos=.62]{weak supervision} ([xshift=10mm]ann.north);
+\draw[ar]  (edr.west) -- ++(-.45,0) |- ([yshift=-8.7mm]ana.east);
 
+\node[ann, anchor=south east, align=right] at (15.72, -4.35) {coverage\\analysis};
+
+%% ---------------- provenance band (bottom) ----------------
+\begin{scope}[on background layer]
+  \node[fill=band, rounded corners=2pt, inner sep=0pt,
+        fit={(-2.75,-7.6) (20.25,-5.55)}] {};
+\end{scope}
+\node[hdr, anchor=west] at (-2.6, -5.9) {PROVENANCE};
+\node[sub=40mm] (p1) at (3.6, -6.75)
+  {\textbf{Collection records}\\[-1pt]mode · status · window · counts};
+\node[sub=40mm] (p2) at (9.0, -6.75)
+  {\textbf{Annotation records}\\[-1pt]prompt digest · model · parameters};
+\node[sub=40mm] (p3) at (14.4, -6.75)
+  {\textbf{Analysis records}\\[-1pt]versions · method · timestamp};
+\node[ann, anchor=east, text width=42mm, align=right] at (20.1, -6.05)
+  {every reported quantity resolves to\\the inputs that produced it};
+
+\draw[ar, draw=ink!45] (ing.south) -- ++(0,-.5) -| (p1.north);
+\draw[ar, draw=ink!45] (ann.south) -- ++(0,-.45) -| (p2.north);
+\draw[ar, draw=ink!45] (ana.south) -- ++(0,-.45) -| (p3.north);
+
+%% ---------------- legend ----------------
+\node[data=7mm, minimum height=4.2mm, inner sep=2pt] (lg1) at (-2.15, -6.45) {};
+\node[ann, anchor=west] at ([xshift=1.4mm]lg1.east) {persistent state};
+\node[extn=7mm, minimum height=4.2mm, inner sep=2pt] (lg2) at (-2.15, -7.1) {};
+\node[ann, anchor=west] at ([xshift=1.4mm]lg2.east) {external source};
 
 \end{tikzpicture}
 \end{document}
