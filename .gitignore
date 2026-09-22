@@ -20,3 +20,7 @@ tldr.pdf
 # 这两个文件各自含有完整的 \documentclass，Overleaf 会认成第二个主文档
 ccint-wrapup-standalone.tex
 ccint-overleaf.zip
+
+# 图的 TikZ 源码带自己的 \documentclass，放在 figures/src/ 下
+# 以免 Overleaf 把它当成第二个主文档
+architecture.pdf

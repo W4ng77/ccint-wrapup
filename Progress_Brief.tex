@@ -1,0 +1,273 @@
+\documentclass[11pt]{article}
+\input{preamble}
+\geometry{margin=0.92in}
+\setlist{topsep=3pt,itemsep=2pt,parsep=0pt}
+\renewcommand{\arraystretch}{1.05}
+
+\title{\vspace{-1.7cm}\textbf{\color{accent}ccint --- Progress Brief}\\[3pt]
+\large\color{ink} Canada Cyber Social Intelligence: design rationale, build, and
+where it stands}
+\author{}
+\date{\normalsize 22 September 2026}
+
+\begin{document}
+\maketitle
+\vspace{-1.5cm}
+
+\section*{\color{accent}The question, and what changed about it}
+\addcontentsline{toc}{section}{The question}
+
+The project began as a longitudinal study: \emph{how does Canada-related
+cybersecurity discussion change over time on social media?} A collector runs
+continuously against Bluesky, posts are labelled under versioned schemes, and
+change is tested statistically.
+
+The first full analysis returned a negative result, and returned it with
+enough rigour to be worth something. The largest topic movement in the 30-day
+window, \code{data\_breach} at $+22\%$, has $p_{\mathrm{FWER}} = 0.734$ under
+an author-level circular-shift null that preserves each author's volume, topic
+mix and burstiness while destroying calendar alignment. Empirical power
+analysis --- measured by author-pool replication rather than assumed ---
+puts the requirement at roughly $8\times$ the current volume.
+
+That result is only interesting if one knows what produced it. Three
+explanations were open, and nothing in the system could separate them, because
+every figure it produced came from labels it had produced itself. The work of
+the last phase was to build the measurements that can separate them. They do,
+and the answer was not the expected one: \textbf{the shortfall is not in the
+statistics and not mainly in the labelling --- it is that the platform carries
+almost no human discussion of these events at all.}
+
+\section*{\color{accent}Why the system is built this way}
+
+Four commitments shaped every design decision. Each exists to prevent a
+specific failure that would be invisible after the fact.
+
+\paragraph{Bluesky, and one platform only.}
+An open, documented API with usable historical search and terms that permit
+research collection; X and Reddit were excluded on access grounds rather than
+merit. The consequence is stated rather than hidden: this is a convenience
+sample, and the project's job became partly to measure what it can show.
+
+\paragraph{Labels are versioned and never overwritten.}
+\code{post\_labels} is keyed \code{(post\_id, label\_version)} and rows are only
+ever inserted. Four labelling schemes currently coexist over the same corpus
+and can be diffed row by row. Without this, every improvement to the labeller
+would silently rewrite history, and a change in topic distribution could never
+be attributed to the world rather than to the method.
+
+\paragraph{Raw data is kept verbatim; every number carries provenance.}
+\code{raw\_payload} is stored unmodified, and every run and model label records
+what produced it --- query version, label version, method, and for model labels
+the SHA-256 of the exact prompt text. The last was added recently, after
+noticing that a model labeller's output is entirely determined by its prompt:
+``labels are never overwritten'' had been preserving the labels while losing
+the conditions that made them.
+
+\paragraph{System failure must be distinguishable from social change.}
+Every collection path writes to \code{collection\_runs} with mode, status,
+window and counts. A day with half the usual volume must be attributable to
+either the world or a token expiry, and only bookkeeping makes that possible.
+This principle held under test: a 42-run token outage is visible in the record
+as 42 \code{partial} runs rather than as a drop in Canadian cyber discussion.
+
+\begin{keybox}
+Underlying all four: \textbf{measure before improving.} Repeatedly the
+intuitive next step turned out to be aimed at the wrong quantity, and only
+measurement revealed it --- tuning the trend score would have been wasted,
+relaxing the relevance rules helps but not for the population that seemed to
+need it, and the most recent prompt improvement introduced a regression the
+evaluation set certified as correct.
+\end{keybox}
+
+\begin{figure}[tb]\centering
+\includegraphics[width=0.87\linewidth]{Architecture.png}
+\caption{System architecture. Blue is durable state, orange is the world
+outside the system, green is the provenance rail that every path must write
+to. The external-reference column on the right is the most recent addition and
+the one that changed the project's conclusions.}
+\label{fig:arch}
+\end{figure}
+
+\section*{\color{accent}How it was built}
+
+Collection runs in two modes against the fixed term list --- a day-by-day
+backfill and an hourly incremental --- with idempotent ingestion, stale-run
+reaping and client-timestamp repair. The corpus stands at 91{,}551 posts over
+22 August -- 22 September 2026.
+
+Labelling proceeded in four generations, all retained. \code{rules\_v1} and
+\code{rules\_v2} are lexicon-based; \code{llm\_v1} re-decides topic only,
+inheriting the relevance verdict verbatim so the two changes stay separately
+attributable; \code{llm\_v2c} replaces the relevance gate. Analysis covers
+descriptive statistics, permutation testing against two null models,
+behavioural broadcast detection with a collection-lag control, and a two-axis
+actor typology separating measured audience from content-judged function. The
+most recent phase added the right-hand column of Figure~\ref{fig:arch}: an
+external registry, evaluation sets built from it, and an oracle collection
+mode that asks what the platform \emph{would} have yielded had the answer been
+known in advance.
+
+\section*{\color{accent}Where it stands}
+
+\subsection*{The collection boundary was never measured}
+
+The 34 search terms came from a specification naming four examples followed by
+``etc.''; the remaining 26 were supplied during implementation from domain
+intuition, never derived from data and never revised. Reconstructing per-term
+productivity offline over the stored corpus:
+
+\begin{center}\small
+\begin{tabularx}{.93\linewidth}{@{}Lrr@{}}
+\toprule
+\hd{Search term} & \hd{Posts retrieved} & \hd{Judged relevant} \\
+\midrule
+\code{cybersecurity} & 22{,}498 & 200 \\
+\code{ransomware}    &  8{,}881 & 105 \\
+\code{data breach}   &  1{,}939 &  90 \\
+\code{CVE}           & \textbf{12{,}502} & \textbf{3} \\
+11 further terms     & --- & \textbf{0} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\code{CVE} accounts for $13.7\%$ of everything collected and returns three
+relevant posts. \code{cybersecurity} alone accounts for $30.8\%$ of all
+relevant posts: the corpus time series is, to first order, one search term's
+time series, and nothing monitors it. None of the 34 terms names Canada, so
+any Canadian cyber post not phrased with one of them is unreachable by
+construction.
+
+\subsection*{Replacing the relevance gate}
+
+The old gate was a conjunction of two narrow lexicons, so recall was bounded
+by their intersection: 650 of 91{,}551 posts passed, and the 89{,}714 rejected
+had never been examined by anything semantic. The replacement asks a local
+model two \emph{independent} single questions rather than one conjunction ---
+a single combined prompt causes a 4B model to collapse the conjunction onto
+the side it knows better, admitting global threat-intelligence noise at
+$6.8\%$ while the true Canadian rate is $1.1\%$.
+
+\begin{center}\small
+\begin{tabularx}{.93\linewidth}{@{}Lrrr@{}}
+\toprule
+\hd{Relevance gate} & \hd{recall} & \hd{specificity} & \hd{corpus} \\
+ & \hd{@ registry} & \hd{@ registry} & \hd{relevant} \\
+\midrule
+\code{rules\_v2} --- keyword conjunction     & 46.5\% & 99.8\% & 650 \\
+\code{llm\_v2c} --- two questions + validation & \textbf{68.3\%} & 99.4\% & \textbf{2{,}348} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Of the 1{,}799 posts newly admitted, $84.0\%$ had been rejected on the Canadian
+side of the conjunction. Two findings from this phase are worth carrying
+forward as method rather than as numbers. First, entity character offsets are
+computed with \code{str.find} rather than requested from the model, on the
+narrow grounds that small models miscount them --- and this turned into a free
+hallucination detector, since an entity that cannot be located in the post was
+invented. Nearly half of extracted \code{place} entities failed it. Second,
+the residual error that remains is not a prompt or capability problem: the
+posts still missed contain no country marker at all (``New post from \#Qilin:
+Coldfish Seafood''), so closing it requires a gazetteer of Canadian
+organisations rather than a better model.
+
+\subsection*{The external reference, and the central result}
+
+Until this phase every precision and recall figure traced to a single author
+who wrote the rules, the prompts, and the hand-coded evaluation set. A
+reported $\kappa = 0.870$ measured agreement under those conditions, not
+independence. Ingesting a public ransomware victim registry (1{,}080 events,
+1{,}943 entities) supplies labels no part of the system produced.
+
+For every Canadian event in the window, the victim organisation's name was
+also searched directly on the platform, with no cybersecurity term attached,
+and every hit passed through the cyber judgement before counting:
+
+\begin{center}\small
+\begin{tabularx}{.93\linewidth}{@{}Lrr@{}}
+\toprule
+\hd{Canadian ransomware events, 22 Aug -- 22 Sep 2026} & \hd{Events} & \hd{Share} \\
+\midrule
+Listed in the registry                                   & 27 & --- \\
+At least one cyber-related post exists on Bluesky        & 26 & 96\% \\
+At least one such post was collected by ccint            & 26 & 96\% \\
+At least one came from a \textbf{non-feed} account       & \textbf{2} & \textbf{7\%} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+The 144 relevant posts come from 15 accounts. Twelve are automated
+threat-intelligence feeds; the three that are not are Canadian news
+organisations contributing five posts between them, all about a single event.
+Individual users contributed nothing; $94.9\%$ of the posts have no likes.
+
+\begin{keybox}
+\textbf{What looks like coverage is syndication.} The collector is not the
+bottleneck here --- it captured 26 of the 26 events the platform carried. No
+ransomware trend is detectable because there is almost no ransomware
+\emph{discussion} to detect: the corpus is a near-complete mirror of several
+leak-site feeds. That also reframes the power analysis --- $8\times$ of this
+corpus is $8\times$ as much syndication, so volume is the wrong lever.
+\end{keybox}
+
+The one exception is instructive. The Commission de la construction du
+Qu\'ebec, listed by the Qilin group with roughly 350{,}000 records taken, drew
+genuine Canadian media coverage in French and English. Four of the five posts
+are in the corpus; the missing one, a radio interview with the CCQ's chief
+executive, contains no term from the 34-term list because \emph{protection
+pr\'eventive} is in no lexicon. One post, one missing phrase, a real event ---
+the collection-boundary gap at human scale.
+
+\subsection*{A methodological result about evaluation}
+
+The prompt revision that fixed recall also generalised ``a \code{.ca} domain
+counts'' into ``a domain counts'', admitting \code{trustedsec.com}, the UK's
+\code{NCSC} and \code{ia.cr} --- the Costa Rican TLD --- and inflating the
+corpus from 906 to 3{,}528 posts, a third of them spurious. The external
+negative set reported $99.0\%$ specificity throughout, because it is built from
+formulaic English feed posts about foreign victims: no URLs, no French, and so
+none of the model's actual failure modes. \textbf{An external label removes
+self-reference but does not confer representativeness, and a
+non-representative evaluation set does not merely fail to catch a regression
+--- it certifies one.}
+
+\section*{\color{accent}What the project is, and what comes next}
+
+The original framing --- trend analysis of Canadian cyber discourse --- is not
+available at this volume for this event class, and adding data will not make it
+so. What is available, and appears to be unreported in the surveyed
+literature, is a sensor that states its own blind spots numerically. Published
+systems report how many events they detected (84 of 151 in the strongest
+comparable work); none reports how many events had no platform presence at
+all, because establishing that requires the per-event oracle search used here,
+affordable only when the event count is small. This project's greatest
+liability --- a corpus of a few thousand relevant posts --- is precisely what
+makes the denominator measurable.
+
+Immediate priorities, in order:
+
+\begin{enumerate}[leftmargin=1.5em,itemsep=2pt]
+\item \textbf{Widen the registry beyond ransomware} --- Cyber Centre
+advisories, CISA KEV, Canadian media RSS. Every figure above is conditioned on
+a source seeing only leak-site victims: the narrowest limitation in the work.
+\item \textbf{Feed the registry back into the gate.} The residual failure is
+missing knowledge of Canadian organisation names; the registry is a list of
+exactly those names.
+\item \textbf{Add a Canada-side query stream} as an additional OR stream, not
+a filter --- to reach the population the registry cannot see.
+\item \textbf{Have an independent annotator label the 200-post sample} already
+drawn and left blank. It is the one step that cannot be automated, and the one
+every other number rests on.
+\end{enumerate}
+
+\enlargethispage{3\baselineskip}
+\medskip
+\begin{plainbox}
+\footnotesize
+Corpus 91{,}551 posts, 22 Aug -- 22 Sep 2026; registry retrieved 22 Sep 2026;
+four coexisting label versions; 243 tests passing. Methodology in the project
+wrap-up; coverage measurements in the iteration report.
+\end{plainbox}
+
+\end{document}

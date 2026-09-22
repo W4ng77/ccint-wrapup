@@ -8,8 +8,20 @@ at the repository root.
 
 | Document | Length | Root file |
 |---|---|---|
+| **Progress brief** — start here | 4 pp | `Progress_Brief.tex` |
+| Iteration report — coverage measurements | 9 pp | `iteration.tex` |
 | Full write-up | 15 pp | `main.tex` |
-| **Two-page summary** | 2 pp | `tldr.tex` |
+| Two-page summary | 2 pp | `tldr.tex` |
+
+`Architecture.png` is the system diagram used by the progress brief; its TikZ
+source is `figures/src/architecture.tex`, kept out of the repository root so
+Overleaf does not mistake its `\documentclass` for a second main document.
+Rebuild it with:
+
+```
+pdflatex figures/src/architecture.tex && pdftoppm -png -r 175 architecture.pdf A
+mv A-1.png figures/Architecture.png && cp figures/Architecture.png .
+```
 
 Both share `preamble.tex`.
 
