@@ -36,12 +36,12 @@
 
 %% ---------------- row 1 : acquisition ----------------
 \node[stage] (ret) at (0, 0)
-  {Keyword retrieval\\[-1pt]{\scriptsize 34 query terms · one request per term\\
-   \textit{no query term names Canada}}};
+  {Source retrieval\\[-1pt]{\scriptsize user-specified forums \& feeds\\
+   \textit{(\texttt{sources.yaml}: AT Proto · RSS · Discourse)}}};
 \node[stage] (ing) at (5.6, 0)
-  {Ingestion\\[-1pt]{\scriptsize idempotent upsert · deduplication\\timestamp normalisation}};
+  {Ingestion\\[-1pt]{\scriptsize robots gate · rate limit\\idempotent upsert · deduplication}};
 \node[data]  (cor) at (11.2, 0)
-  {Corpus \;$n = 91{,}551$\\[-1pt]{\scriptsize immutable raw payloads}};
+  {Corpus \;$n = 95{,}911$\\[-1pt]{\scriptsize immutable raw payloads}};
 
 \draw[ar] (ret) -- (ing);
 \draw[ar] (ing) -- (cor);
@@ -50,7 +50,8 @@
 \node[sub] (a1) at (0.6, -2.85) {Rule-based baseline \;lexicon conjunction \;($n{=}650$)};
 \node[sub] (a2) at (0.6, -3.72)
   {\textbf{Relevance model} \;decoupled binary predicates $+$ entity extraction \;($n{=}2{,}348$)};
-\node[sub] (a3) at (0.6, -4.59) {Topic model \;11-class assignment};
+\node[sub] (a3) at (0.6, -4.59)
+  {Topic model \;11-class \hspace{2pt}$|$\hspace{2pt} CVE extraction \;\textit{deterministic}};
 \begin{scope}[on background layer]\node[grp, fit=(a1)(a2)(a3)] (ann) {};\end{scope}
 
 \node[data=40mm] (out) at (6.8, -3.72)
@@ -79,7 +80,7 @@
 %% ---------------- external validation (right) ----------------
 \node[hdr, anchor=west] at (15.55, 1.35) {EXTERNAL VALIDATION};
 \node[extn] (src) at (17.9, 0)
-  {Public incident registry\\[-1pt]{\scriptsize $1{,}080$ events · $1{,}943$ entities}};
+  {Incident registry · NVD · CISA KEV\\[-1pt]{\scriptsize $1{,}080$ events · $1{,}721$ KEV entries}};
 \node[data=42mm] (ev) at (17.9, -2.2)
   {Reference evaluation sets\\[-1pt]{\scriptsize stratified by account class}};
 \node[extn] (edr) at (17.9, -4.4)
@@ -87,35 +88,40 @@
 
 \draw[ar] (src) -- (ev);
 \draw[ar] (ev) -- (edr);
-\draw[arw] (src.west) -- node[ann, above, pos=.5]{entity matching} (cor.east);
+\draw[arw] (src.west) -- node[ann, above, pos=.5]{entity \& CVE matching} (cor.east);
 \draw[arw] (ev.west)  -- ++(-.7,0) -| node[ann, above, pos=.62]{weak supervision} ([xshift=10mm]ann.north);
 \draw[ar]  (edr.west) -- ++(-.45,0) |- ([yshift=-8.7mm]ana.east);
 
 \node[ann, anchor=south east, align=right] at (15.72, -4.35) {coverage\\analysis};
 
+\node[data=40mm] (portal) at (12.1, -6.55)
+  {Web portal \;\textit{read-only}\\[-1pt]{\scriptsize topics over time · last 14 days · CVE links}};
+\node[num] at ([xshift=-3.2mm]portal.west) {6};
+\draw[ar] (ana.south) -- (portal.north);
+
 %% ---------------- provenance band (bottom) ----------------
 \begin{scope}[on background layer]
   \node[fill=band, rounded corners=2pt, inner sep=0pt,
-        fit={(-2.75,-7.6) (20.25,-5.55)}] {};
+        fit={(-2.75,-9.15) (20.25,-7.1)}] {};
 \end{scope}
-\node[hdr, anchor=west] at (-2.6, -5.9) {PROVENANCE};
-\node[sub=40mm] (p1) at (3.6, -6.75)
+\node[hdr, anchor=west] at (-2.6, -7.45) {PROVENANCE};
+\node[sub=40mm] (p1) at (3.2, -8.3)
   {\textbf{Collection records}\\[-1pt]mode · status · window · counts};
-\node[sub=40mm] (p2) at (9.0, -6.75)
+\node[sub=40mm] (p2) at (8.3, -8.3)
   {\textbf{Annotation records}\\[-1pt]prompt digest · model · parameters};
-\node[sub=40mm] (p3) at (14.4, -6.75)
+\node[sub=40mm] (p3) at (13.3, -8.3)
   {\textbf{Analysis records}\\[-1pt]versions · method · timestamp};
-\node[ann, anchor=east, text width=42mm, align=right] at (20.1, -6.05)
+\node[ann, anchor=east, text width=42mm, align=right] at (20.1, -7.6)
   {every reported quantity resolves to\\the inputs that produced it};
 
 \draw[ar, draw=ink!45] (ing.south) -- ++(0,-.5) -| (p1.north);
 \draw[ar, draw=ink!45] (ann.south) -- ++(0,-.45) -| (p2.north);
-\draw[ar, draw=ink!45] (ana.south) -- ++(0,-.45) -| (p3.north);
+\draw[ar, draw=ink!45] (portal.south) -- ++(0,-.45) -| (p3.north);
 
 %% ---------------- legend ----------------
-\node[data=7mm, minimum height=4.2mm, inner sep=2pt] (lg1) at (-2.15, -6.45) {};
+\node[data=7mm, minimum height=4.2mm, inner sep=2pt] (lg1) at (-2.15, -8.0) {};
 \node[ann, anchor=west] at ([xshift=1.4mm]lg1.east) {persistent state};
-\node[extn=7mm, minimum height=4.2mm, inner sep=2pt] (lg2) at (-2.15, -7.1) {};
+\node[extn=7mm, minimum height=4.2mm, inner sep=2pt] (lg2) at (-2.15, -8.65) {};
 \node[ann, anchor=west] at ([xshift=1.4mm]lg2.east) {external source};
 
 \end{tikzpicture}
