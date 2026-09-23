@@ -12,7 +12,7 @@
 \large\color{ink} Canada Cyber Social Intelligence: design rationale, build, and
 where it stands}
 \author{}
-\date{\normalsize 22 September 2026}
+\date{\normalsize 23 September 2026}
 
 \begin{document}
 \maketitle
@@ -61,19 +61,17 @@ in topic distribution could never be attributed to the world rather than to the
 method.
 
 \paragraph{Raw data is kept verbatim; every number carries provenance.}
-\code{raw\_payload} is stored unmodified, and every run and model label records
-what produced it --- query version, label version, method, and for model labels
-the SHA-256 of the exact prompt text. The last was added recently, after
-noticing that a model labeller's output is entirely determined by its prompt:
-``labels are never overwritten'' had been preserving the labels while losing
-the conditions that made them.
+Payloads are stored unmodified, and every run and model label records what
+produced it, including the SHA-256 of the exact prompt text. That last part was
+added after noticing that a model annotator's output is entirely determined by
+its prompt: ``labels are never overwritten'' had preserved the labels while
+losing the conditions that made them.
 
 \paragraph{System failure must be distinguishable from social change.}
-Every collection path records mode, status, window and counts. A day with half
-the usual volume must be attributable to either the world or a token expiry,
-and only bookkeeping makes that possible. The principle held under test: a
-42-run token outage appears in the record as 42 \code{partial} runs, not as a
-drop in Canadian cyber discussion.
+Every collection path records mode, status, window and counts, so a day with
+half the usual volume is attributable to either the world or a token expiry. The
+principle held under test: a 42-run token outage appears as 42 \code{partial}
+runs, not as a drop in Canadian cyber discussion.
 
 \begin{keybox}
 Underlying all four: \textbf{measure before improving.} Repeatedly the
@@ -84,8 +82,8 @@ need it, and the most recent prompt improvement introduced a regression the
 evaluation set certified as correct.
 \end{keybox}
 
-\begin{figure}[tb]\centering
-\includegraphics[width=1.0\linewidth]{Architecture.png}
+\begin{figure}[htbp]\centering
+\includegraphics[width=0.86\linewidth]{Architecture.png}
 \caption{Processing pipeline. Stages 1--3 acquire and store the corpus, stage 4
 annotates it under coexisting versioned schemes, stage 5 analyses the result.
 The external-validation column supplies labels no component of the pipeline
@@ -97,15 +95,28 @@ produced.}
 
 Collection runs in two modes against the fixed term list --- a day-by-day
 backfill and an hourly incremental --- with idempotent ingestion, stale-run
-reaping and client-timestamp repair. Annotation proceeded in four generations,
+reaping and client-timestamp repair; the corpus stands at 95{,}943 posts across
+three sources. Annotation proceeded in four generations,
 all retained: two lexicon-based, one that re-decides topic only while
 inheriting the relevance verdict verbatim so the two changes stay separately
 attributable, and one that replaces the relevance decision entirely. Analysis
 covers descriptive statistics, permutation testing against two null models,
 behavioural broadcast detection with a collection-lag control, and a two-axis
 actor typology separating measured audience from content-judged function. The
-most recent phase added the external-validation column of
-Figure~\ref{fig:arch}.
+most recent phases added the external-validation column of
+Figure~\ref{fig:arch} and then three capability layers: user-specified sources,
+deterministic CVE linking, and a read-only portal.
+
+\paragraph{Sources are configuration, not code.}
+\code{config/sources.yaml} names the forums and feeds to read; two generic
+collectors (RSS\slash Atom and the Discourse public JSON API) cover most of what
+a security community exposes. Both consult \code{robots.txt} and refuse a source
+they cannot read, because a collector that gets blocked produces a gap, and a
+gap is indistinguishable from a fall in discussion --- the confusion this project
+exists to prevent. Each source must declare why automated access is believed
+permissible; the loader rejects one that does not. Web sources reuse the
+existing ingest path rather than adding a second, since a second path is a
+second way to bypass run bookkeeping.
 
 \section*{\color{accent}Where it stands}
 
@@ -116,23 +127,12 @@ The 34 search terms came from a specification naming four examples followed by
 intuition, never derived from data and never revised. Reconstructing per-term
 productivity offline over the stored corpus:
 
-\begin{center}\small
-\begin{tabularx}{.93\linewidth}{@{}Lrr@{}}
-\toprule
-\hd{Search term} & \hd{Posts retrieved} & \hd{Judged relevant} \\
-\midrule
-\code{cybersecurity} & 22{,}498 & 200 \\
-\code{ransomware}    &  8{,}881 & 105 \\
-\code{data breach}   &  1{,}939 &  90 \\
-\code{CVE}           & \textbf{12{,}502} & \textbf{3} \\
-11 further terms     & --- & \textbf{0} \\
-\bottomrule
-\end{tabularx}
-\end{center}
-
-\code{CVE} accounts for $13.7\%$ of everything collected and returns three
-relevant posts. \code{cybersecurity} alone accounts for $30.8\%$ of all
-relevant posts: the corpus time series is, to first order, one search term's
+Productivity is close to degenerate. \code{cybersecurity} returned 22{,}498
+posts and 200 relevant ones; \code{ransomware} 8{,}881 and 105; \code{CVE}
+12{,}502 and \textbf{three}. Eleven terms returned no relevant post at all, and
+one returned no post at all. \code{CVE} accounts for $13.7\%$ of everything
+collected; \code{cybersecurity} alone accounts for $30.8\%$ of all relevant
+posts, so the corpus time series is, to first order, one search term's
 time series, and nothing monitors it. None of the 34 terms names Canada, so
 any Canadian cyber post not phrased with one of them is unreachable by
 construction.
@@ -160,15 +160,14 @@ true Canadian rate of $1.1\%$.
 \end{center}
 
 Of the 1{,}799 posts newly admitted, $84.0\%$ had been rejected on the Canadian
-side of the conjunction. Two results here are method rather than number.
-Entity offsets are computed with \code{str.find} rather than requested from the
-model, on the narrow grounds that small models miscount them --- which turned
-into a free hallucination detector, since an entity that cannot be located in
-the post was invented, and nearly half of extracted \code{place} entities
-failed it. And the residual error is neither a prompt nor a capability problem:
-the posts still missed carry no country marker at all (``New post from
-\#Qilin: Coldfish Seafood''), so closing it needs a gazetteer of Canadian
-organisations, not a larger model.
+side of the conjunction. Two results here are method rather than number. Entity
+offsets are computed with \code{str.find} rather than requested from the model,
+on the narrow grounds that small models miscount them --- which turned into a
+free hallucination detector, since an entity that cannot be located in the post
+was invented, and nearly half of extracted \code{place} entities failed it. And
+the residual error is neither a prompt nor a capability problem: the posts still
+missed carry no country marker at all, so closing it needs a gazetteer of
+Canadian organisations, not a larger model.
 
 \subsection*{The external reference, and the central result}
 
@@ -216,18 +215,44 @@ in the corpus; the fifth, a radio interview with the CCQ's chief executive,
 carries no term from the 34-term list because \emph{protection pr\'eventive} is
 in no lexicon --- the collection-boundary gap at human scale.
 
+\subsection*{Linking discussion to vulnerabilities}
+
+CVE identifiers are extracted by regular expression, not by a model. The format
+is fixed by MITRE, so the extraction is deterministic --- which makes this the
+one table in the system whose trustworthiness does not depend on annotation
+quality. Identifiers are then enriched from two independent external sources:
+NVD supplies theoretical severity, and the CISA Known Exploited Vulnerabilities
+catalogue records that exploitation has actually been observed. The two are kept
+in separate columns and deliberately never combined into a single risk score:
+one is a judgement about how bad a flaw could be, the other is an observation
+that someone is using it, and merging them would conceal which part is external
+fact.
+
+Across the corpus, 10{,}820 posts mention 5{,}404 distinct CVE identifiers.
+Only 147 of those --- $2.7\%$ --- appear in the KEV catalogue. Those 147 attract
+$19.3\%$ of all mentions, a concentration of roughly $7\times$, and 22 of the 25
+most-discussed identifiers are among them.
+
+\begin{keybox}
+\textbf{Attention tracks exploitation, not severity.} This is the first result
+in the project where social-media attention aligns with an external ground truth
+rather than merely mirroring a feed. It is also a usable one: a monitor that
+ranks vulnerabilities by how much they are being discussed recovers, without
+being told, most of the set that CISA has independently confirmed as exploited.
+\end{keybox}
+
 \subsection*{A methodological result about evaluation}
 
-The prompt revision that fixed recall also generalised ``a \code{.ca} domain
-counts'' into ``a domain counts'', admitting \code{trustedsec.com}, the UK's
-\code{NCSC} and \code{ia.cr} --- the Costa Rican TLD --- and inflating the
-corpus from 906 to 3{,}528 posts, a third of them spurious. The external
+The prompt revision that fixed entity recall simultaneously generalised ``a
+\code{.ca} domain counts'' into ``a domain counts'', inflating the corpus from
+906 to 3{,}528 posts with a third of them spurious --- while the external
 negative set reported $99.0\%$ specificity throughout, because it is built from
-formulaic English feed posts about foreign victims: no URLs, no French, and so
-none of the model's actual failure modes. \textbf{An external label removes
-self-reference but does not confer representativeness, and a
-non-representative evaluation set does not merely fail to catch a regression
---- it certifies one.}
+formulaic English feed posts about foreign victims and contains none of the
+model's actual failure modes. \textbf{An external label removes self-reference
+but does not confer representativeness, and a non-representative evaluation set
+does not merely fail to catch a regression --- it certifies one.} Two
+deterministic checks catch it at no cost; the accompanying iteration report
+gives the full account.
 
 \section*{\color{accent}What the project is, and what comes next}
 
@@ -255,12 +280,18 @@ is a list of exactly those names.
 stream, not a filter, to reach the population the registry cannot see.
 \item \textbf{Have an independent annotator label the 200-post sample} already
 drawn and left blank --- the one step that cannot be automated.
+\item \textbf{Let the new sources accumulate.} Multi-source collection works but
+is not yet demonstrated at scale: the two feeds added so far contributed 45
+posts, because RSS exposes only recent items and cannot be backfilled. A
+comparable time series requires either running them forward for weeks or adding
+a paginated source such as a Discourse forum.
 \end{enumerate}
 
 \medskip
 \noindent{\footnotesize\itshape\color{ink!65}
-Corpus 91{,}551 posts, 22 Aug -- 22 Sep 2026; registry retrieved 22 Sep 2026;
-four coexisting annotation versions; 243 tests passing. Methodology in the
+Corpus 95{,}943 posts across three sources, 22 Aug -- 23 Sep 2026; registry and
+KEV catalogue retrieved 22--23 Sep 2026; five coexisting annotation versions;
+252 tests passing. Methodology in the
 project wrap-up, coverage measurements in the iteration report.}
 
 \end{document}

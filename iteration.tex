@@ -423,6 +423,78 @@ first claim is weak and partly false. The second is, as far as the surveyed
 literature goes, unreported.
 \end{keybox}
 
+\section{A later addition: linking discussion to vulnerabilities}
+
+The measurements above are a snapshot taken on 22 September 2026 against a
+corpus of 91{,}551 posts, and are left as recorded. A subsequent phase added
+three capability layers --- user-specified sources, CVE linking, and a read-only
+portal --- of which one produced a result rather than only a capability.
+
+CVE identifiers are extracted by regular expression rather than by a model.
+Their format is fixed by MITRE, so extraction is deterministic; this is the one
+table in the system whose trustworthiness is independent of annotation quality,
+which is unusual here and worth stating plainly. Identifiers are then enriched
+from two external sources that the system cannot influence: NVD for theoretical
+severity, and the CISA Known Exploited Vulnerabilities catalogue for the fact of
+observed exploitation. The two are kept in separate columns and never combined
+into a risk score. One is a judgement about how bad a flaw could be; the other
+is an observation that somebody is using it. A combined number would hide which
+half is external fact --- the same error, in a smaller form, as the composite
+trend score this project rejected earlier.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}Lrr@{}}
+\toprule
+\hd{Across the corpus, 22 Aug -- 23 Sep 2026} & \hd{Count} & \hd{Share} \\
+\midrule
+Posts mentioning at least one CVE identifier & 10{,}820 & --- \\
+Distinct identifiers mentioned              & 5{,}404  & --- \\
+Of those, listed in the CISA KEV catalogue  & 147      & 2.7\% \\
+Share of all mentions going to those 147    & ---      & \textbf{19.3\%} \\
+Of the 25 most-discussed identifiers, in KEV & \textbf{22} & 88\% \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{keybox}
+\textbf{Attention tracks exploitation rather than severity.} A set of
+vulnerabilities making up $2.7\%$ of those mentioned attracts $19.3\%$ of the
+mentions --- a concentration of roughly sevenfold --- and nearly nine in ten of
+the most-discussed identifiers are ones CISA has independently confirmed as
+exploited. This is the first result in the project where social-media attention
+aligns with an external ground truth instead of mirroring a feed, and the first
+that is directly usable: ranking vulnerabilities by how much they are discussed
+recovers most of the confirmed-exploited set without being told what it is.
+\end{keybox}
+
+Two caveats belong with that figure. The concentration is measured over
+mentions, and the feed accounts characterised in Section~4 contribute a large
+share of them, so this is partly a statement about what threat-intelligence
+syndication prioritises. And KEV enrichment is complete --- one catalogue fetch
+covers every identifier --- while NVD severity enrichment is not: without an API
+key the rate limit is five requests per thirty seconds, so severity is currently
+resolved for the highest-priority 173 identifiers rather than all 5{,}404.
+
+\paragraph{Sources became configuration.}
+The collection boundary is now declared in a file rather than compiled in, with
+two generic collectors covering RSS\slash Atom and the Discourse public JSON
+API. Both consult \code{robots.txt} and refuse a source they cannot read: a
+blocked collector produces a gap, and a gap is indistinguishable from a fall in
+discussion. Each source must state why automated access is believed permissible,
+and the loader rejects one that does not. This is implemented but not yet
+demonstrated at scale --- the two feeds added so far contributed 45 posts,
+because RSS exposes only recent items and cannot be backfilled.
+
+\paragraph{The reports acquired a reader.}
+A read-only portal presents topics over time, the last fourteen days, the CVE
+table above, and collection health beside the content. It is read-only by test:
+a button that triggered collection from the interface would put runs into the
+record with no corresponding plan, and that record exists precisely so that a
+quiet day can be attributed to the world or to the machine. Every panel carries
+its own caveat text, because a bare number on a screen reads as unconditional ---
+the window-over-window differences in particular are labelled as descriptive,
+since permutation testing found none of them distinguishable from noise.
+
 \section{Engineering changes supporting the above}
 
 \begin{center}
@@ -516,9 +588,11 @@ support.
 All figures in this report derive from the corpus of 91{,}551 posts collected
 between 22 August and 22 September 2026, the ransomware.live registry as
 retrieved on 22 September 2026, and an entity-directed retrieval pass executed
-the same day.
+the same day. The vulnerability-linking section reports a corpus of 95{,}943
+posts as of 23 September 2026; earlier sections are left at the figures recorded
+on the 22nd.
 Labels are stored under versioned identifiers and every model-produced label
-carries the hash of the prompt that produced it. The test suite stands at 241
+carries the hash of the prompt that produced it. The test suite stands at 252
 passing.
 \end{plainbox}
 
