@@ -12,6 +12,8 @@
 *.lot
 main.pdf
 tldr.pdf
+iteration.pdf
+Progress_Brief.pdf
 
 # figures/*.pdf 是 `ccint viz` 的产物，但**必须提交** ——
 # Overleaf 侧没有数据库，拉不到图就编译不出来。

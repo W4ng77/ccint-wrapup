@@ -41,7 +41,7 @@
 \node[stage] (ing) at (5.6, 0)
   {Ingestion\\[-1pt]{\scriptsize robots gate · rate limit\\idempotent upsert · deduplication}};
 \node[data]  (cor) at (11.2, 0)
-  {Corpus \;$n = 95{,}911$\\[-1pt]{\scriptsize immutable raw payloads}};
+  {Corpus \;$n = 96{,}002$\\[-1pt]{\scriptsize immutable raw payloads}};
 
 \draw[ar] (ret) -- (ing);
 \draw[ar] (ing) -- (cor);
@@ -49,7 +49,7 @@
 %% ---------------- row 2 : annotation, store, analysis ----------------
 \node[sub] (a1) at (0.6, -2.85) {Rule-based baseline \;lexicon conjunction \;($n{=}650$)};
 \node[sub] (a2) at (0.6, -3.72)
-  {\textbf{Relevance model} \;decoupled binary predicates $+$ entity extraction \;($n{=}2{,}348$)};
+  {\textbf{Relevance model} \;decoupled binary predicates $+$ entity extraction \;($n{=}2{,}502$)};
 \node[sub] (a3) at (0.6, -4.59)
   {Topic model \;11-class \hspace{2pt}$|$\hspace{2pt} CVE extraction \;\textit{deterministic}};
 \begin{scope}[on background layer]\node[grp, fit=(a1)(a2)(a3)] (ann) {};\end{scope}
@@ -92,12 +92,17 @@
 \draw[arw] (ev.west)  -- ++(-.7,0) -| node[ann, above, pos=.62]{weak supervision} ([xshift=10mm]ann.north);
 \draw[ar]  (edr.west) -- ++(-.45,0) |- ([yshift=-8.7mm]ana.east);
 
-\node[ann, anchor=south east, align=right] at (15.72, -4.35) {coverage\\analysis};
+\node[ann, anchor=south east, align=right] at (15.72, -3.95) {coverage\\analysis};
 
+\node[stage=40mm] (agt) at (6.5, -6.55)
+  {Agent orchestration\\[-1pt]{\scriptsize ten tools over the components above\\
+   \textit{selects tools; computes nothing}}};
 \node[data=40mm] (portal) at (12.1, -6.55)
   {Web portal \;\textit{read-only}\\[-1pt]{\scriptsize topics over time · last 14 days · CVE links}};
-\node[num] at ([xshift=-3.2mm]portal.west) {6};
-\draw[ar] (ana.south) -- (portal.north);
+\node[num] at ([shift={(-2.7mm,-1.2mm)}]agt.north west) {6};
+\node[num] at ([shift={(-2.7mm,-1.2mm)}]portal.north west) {7};
+\draw[ar] (ana.south) -- ++(0,-1.05) -| (agt.north);
+\draw[ar] (agt) -- (portal);
 
 %% ---------------- provenance band (bottom) ----------------
 \begin{scope}[on background layer]
